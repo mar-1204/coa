@@ -1,0 +1,208 @@
+---
+title: 'AdvaProgR Tutorial Session: Practice Package'
+output: html_document
+---
+
+```{r, echo = FALSE}
+## setup
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", out.width = "50%")
+```
+
+# Intro
+
+Today we will write a small practice package and get it to the status where we could submit it to CRAN.
+
+The package will provide the operator `%+=%`, which increments a variable by a given value:
+
+```r
+x <- 1
+x %+=% 10
+x
+#> [1] 11
+```
+
+This is called a "compound assignment" operator, you could e.g. call your package "coa" or something more creative (maybe not PoundAss).
+
+(If you have time left over, you can also implement the operators `%-=%`, `%*=%`, `%/=%`, and `%c=%`.
+Oter ideas are `` `++` `` and `` `--` ``, which would increment / decrement a variable by 1: `` `++`(x) ``).
+
+
+# Set Up a Project Folder
+
+## Git Setup
+
+Create an empty folder and prepare it for usage with `git`, for example using
+```sh
+git init
+```
+
+Create a `.gitignore` file, which should ignore the most commonly created temporary files or output files from vignettes.
+Possible content would be:
+```
+.Rproj.user
+.Rhistory
+.RData
+.#*
+*~
+\#*#
+*.swp
+.project
+.ipynb_checkpoints
+vignettes/*.html
+/inst/doc/*
+!/inst/doc/*.html
+/doc/
+/docs/
+/data/
+*.rds
+*.Rproj
+```
+
+commit this using RStudio, or just
+```sh
+git add .gitignore
+git commit -m "initial commit"
+```
+
+## GitHub Setup
+
+Log in to GitHub and create a new empty project.
+If you don't mind you should can make this repo public, because you can then more easily use `pkgdown` to create a website.
+
+Add this repository as remote to your local git repo and push it, using RStudio or the shell:
+```sh
+git remote add origin git@github.com:<repo>.git
+git push -u origin master
+```
+
+## Package Skeleton and Metadata
+
+Create the necessary metadata files for your package.
+The canonical reference for this process is part 1.1 of [Writing R Extensions](https://cran.r-project.org/doc/manuals/R-exts.html).
+
+* `DESCRIPTION`: needs 'Package' (package name, the one then used by `install.packages()`), 'Title', 'Description' (a few sentences), 'Authors@R', 'URL' (your github repo url), 'BugReports' (the same url, with `/issues` appended), and 'License' (choose your own, see '1.1.2 Licensing' in Writing R Extensions).
+
+    You should also `Imports` the `checkmate` package, and `Suggests` the `testthat` package (for tests).
+
+    You can use the `DESCRIPTION` file of [the `miesmuschel` package](https://github.com/mlr-org/miesmuschel) as a reference.
+    You should enter yourself as `"aut"` and `"cre"`, but you don't have to use your real name / email address as long as you don't plan to upload to CRAN.
+* `.Rbuildignore`: Should at least ignore the `.github` folder. You could also create a folder where you store files needed by yourself, which you could call 'attic' or 'experiments'.
+
+    Note that `.Rbuildignore` uses regex-syntax, so to ignore something called `file.ext`, write `^file\.ext$`.
+* `README.md`: Describe the package in a few lines and a small example. This is the page that will be displayed when someone opens your GitHub repo, it is a "landing page".
+* `NEWS.md`: Should probably just be a `# <package name> <version number>` followed by `* Initial version` or something like that.
+* `LICENSE`-file, if needed.
+* `R`-folder (empty for now)
+* `tests`-folder (empty for now)
+* `vignettes`-folder (empty for now)
+
+# Package Content
+
+## Code
+
+Create a file `zzz.R`, with the contnet `#' @import checkmate`.
+This will have the effect of loading the `checkmate` namespace, giving you access to the `AssertXxx()`-functions.
+The name `zzz.R` is chosen because, by default, files are loaded in alphabetical order, so this file is loaded last.
+`zzz.R` often also contains other things that are relevant for "post-processing" the objects loaded in R.
+
+Create another file that defines the `%+=%` function.
+One possible implementation would be
+```r
+`%+=%` = function(t, s) eval.parent(substitute((t) <- (t) + (s)))
+```
+
+Add `roxygen` documentation with a `@title`, `@description`, `@param`s, `@examples`.
+`@export` the function.
+
+You should then be able to create the `NAMESPACE` file by running `devtools::document()` or `roxygen2::roxygenize()`.
+
+`devtools::load_all()` your package to see if it works the way it should.
+
+## Tests
+
+Create the content of the `tests` folder:
+You need a `test.R` with content
+```r
+library("testthat")
+test_check("<your packkage name>")
+```
+
+Then `tests` needs a subfolder `testthat`, which contains `test_<name of tests>.R` file.
+There you write `test_that("...", { ... })` entries.
+You should test a few basic things about the `%+=%` operator.
+
+Try `devtools::test()` to see if your tests pass.
+
+## Vignette
+
+Write a short vignette for your package, in markdown format using `knitr`.
+See [this knigr vignette](https://cran.r-project.org/web/packages/knitr/vignettes/knitr-markdown.html) for a very short version how to do this, and [the markdown cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/package-vignette.html) for a little longer explanation.
+
+Note that you have to edit your `DESCRIPTION` file.
+
+Your vignette should contain some R code that is executed.
+Use `devtools::document()` to also build the vignette.
+
+# Compile and Install
+
+## Compile
+
+While you can install your package through `devtools`, you should also know how to create the package file itself and how to install it.
+
+For this, you use the `R CMD` command line tool, which you have to run from the directory that contains your project files:
+```sh
+cd ..
+R CMD build <your project folder>
+```
+
+This will create a `<packagename>_<version>.tar.gz`.
+
+## Tests
+
+You can use R to run tests.
+These tests are more thorough than `devtools::test()` would do, so you should always do this when you plan to upload your files.
+```sh
+_R_CHECK_CRAN_INCOMING_REMOTE_=false _R_CHECK_TESTS_NLINES_=999 NOT_CRAN=true R CMD check --as-cran <packagefile>.tar.gz
+```
+
+The switches shown here have the following meaning:
+* `_R_CHECK_CRAN_INCOMING_REMOTE_=false`: Do not check if the package already exists on CRAN; we usually don't need this check and it slows things down.
+* `_r_check_tests_nlines_=999`: Show more output if tests fail. By default, only few lines are shown.
+* `--as-cran`: Do more thorough checks than would otherwise be done.
+
+## Install
+
+You can use `R CMD` to install a package:
+
+```sh
+R CMD INSTALL <packagefile>.tar.gz
+```
+
+This also works with packages that you downloaded from CRAN directly.
+
+# Continuous Integration
+
+## Run CI
+
+Once you know that a very basic version of your package can be compiled and passes tests, it is time to set up continuous integration.
+We will use [github actions](https://github.com/features/actions).
+
+This is a huge topic that we won't be able to get much into.
+I invite you to [plagiarize the setup of the `mlr3` package](https://github.com/mlr-org/mlr3/tree/main/.github/workflows).
+You need to create the `.github/workflows` folder and add the `r-cmd-check.yml`-file.
+
+## Add Badges
+
+"Badges" are dynamically generated images that you can include in your `README.md`.
+See the top of the [readme of the `miesmuschel` package](https://raw.githubusercontent.com/mlr-org/miesmuschel/master/README.md), and [how it looks on GitHub](https://github.com/mlr-org/miesmuschel)
+
+## Add pkgdown
+
+Here you can again [get inspired by the `mlr3` package](https://github.com/mlr-org/mlr3/tree/main/.github/workflows), this time the `pkgdown.yml`-file.
+You need to tweak some `GitHub`-settings to get a `github.io`-page.
+
+## Add other things
+
+It is good practice to automatically check code coverage by tests.
+One way to do this is to use the `covr`-package.
+If you run `covr` in your CI and connect your account with `codecov.io`, you can get a badge from them.

@@ -1,0 +1,12 @@
+Package: coa
+Version: 0.1-0
+Date: 2023-01-26
+Title: Practice Package "Compound Assignment"
+Authors@R: c(person("Kung", "Fury", role = c("aut", "cre"),
+                     email = "kung.fury@campus.lmu.de"))
+Description: A short practice package for "compound assignment". Helps me to learn R package development.
+Imports: checkmate
+Suggests: testthat
+License: GPL-2
+URL: https://github.com/mar-1204/coa
+BugReports: https://pkgname.bugtracker.url/issues
